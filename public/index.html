@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IG 發文上傳</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #1a1a1a;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    .field { margin-bottom: 20px; }
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px dashed #d1d5db;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #666;
+    }
+    textarea, input[type="datetime-local"] {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #1a1a1a;
+      outline: none;
+      transition: border 0.2s;
+      font-family: inherit;
+    }
+    textarea:focus, input[type="datetime-local"]:focus {
+      border-color: #6366f1;
+    }
+    textarea { resize: vertical; min-height: 120px; }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .preview img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1.5px solid #e5e7eb;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+    }
+    .result.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .result.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📸 IG 發文上傳</h1>
+
+    <form id="uploadForm">
+      <div class="field">
+        <label>選擇圖片（可多選）</label>
+        <input type="file" id="images" name="images" accept="image/*" multiple required>
+        <div class="preview" id="preview"></div>
+      </div>
+
+      <div class="field">
+        <label>文案</label>
+        <textarea name="caption" id="caption" placeholder="輸入 IG 文案..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Hashtags</label>
+        <textarea name="hashtags" id="hashtags" placeholder="#旅遊 #生活 #美食" style="min-height:70px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label>預計發布時間</label>
+        <input type="datetime-local" name="scheduleDate" id="scheduleDate">
+      </div>
+
+      <button type="submit" id="submitBtn">🚀 上傳並儲存到 Notion</button>
+    </form>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    // 圖片預覽
+    document.getElementById('images').addEventListener('change', function() {
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+      Array.from(this.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // 表單送出
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const result = document.getElementById('result');
+
+      btn.disabled = true;
+      btn.textContent = '上傳中...';
+      result.style.display = 'none';
+
+      const formData = new FormData(this);
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          result.className = 'result success';
+          result.textContent = '✅ 上傳成功！已儲存到 Notion';
+          this.reset();
+          document.getElementById('preview').innerHTML = '';
+        } else {
+          result.className = 'result error';
+          result.textContent = '❌ 失敗：' + data.error;
+        }
+      } catch (err) {
+        result.className = 'result error';
+        result.textContent = '❌ 網路錯誤，請再試一次';
+      }
+
+      result.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '🚀 上傳並儲存到 Notion';
+    });
+  </script>
+</body>
+</html>

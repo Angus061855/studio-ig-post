@@ -65,7 +65,7 @@
       margin-top: 12px;
     }
 
-    /* 外層包住圖片＋檔名 */
+    /* wrapper：圖片框 + 檔名 */
     .preview-wrapper {
       display: flex;
       flex-direction: column;
@@ -74,12 +74,13 @@
       width: 100px;
     }
 
+    /* 圖片框：overflow hidden 讓數字/叉叉不超出 */
     .preview-item {
       position: relative;
       width: 100px;
       height: 100px;
       border-radius: 10px;
-      overflow: visible;
+      overflow: hidden;
       border: 2px solid #2a2a2a;
       cursor: grab;
       user-select: none;
@@ -89,28 +90,27 @@
     .preview-item.dragging { opacity: 0.3; transform: scale(0.95); }
     .preview-item.drag-over { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
 
+    /* 圖片放大：只有 img 縮放，數字/叉叉不動 */
     .preview-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       pointer-events: none;
       display: block;
-      border-radius: 8px;
-      transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-    .preview-item:hover {
-      z-index: 10;
+      border-radius: 6px;
+      transition: transform 0.25s ease;
+      transform-origin: center center;
     }
     .preview-item:hover img {
-      transform: scale(2.2);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+      transform: scale(2.5);
     }
 
+    /* 數字和叉叉固定在角落，不跟著縮放 */
     .preview-item .num {
       position: absolute;
       top: 4px;
       left: 4px;
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.8);
       color: white;
       font-size: 11px;
       font-weight: 700;
@@ -120,13 +120,15 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 11;
+      z-index: 5;
+      /* 讓它不受父層 transform 影響 */
+      will-change: auto;
     }
     .preview-item .remove {
       position: absolute;
       top: 4px;
       right: 4px;
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.8);
       color: white;
       font-size: 12px;
       width: 20px;
@@ -136,10 +138,11 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      z-index: 11;
+      z-index: 5;
     }
+    .remove:hover { background: rgba(220,50,50,0.9); }
 
-    /* 檔名文字 */
+    /* 檔名 */
     .filename {
       font-size: 11px;
       color: #888;
@@ -242,7 +245,6 @@
       hint.style.display = items.length === 0 ? 'none' : 'block';
 
       items.forEach((item, index) => {
-        // 外層 wrapper（圖片 + 檔名）
         const wrapper = document.createElement('div');
         wrapper.className = 'preview-wrapper';
 
@@ -251,19 +253,29 @@
         el.draggable = true;
         el.dataset.index = index;
 
-        el.innerHTML = `
-          <img src="${item.previewUrl}" />
-          <div class="num">${index + 1}</div>
-          <div class="remove">✕</div>
-        `;
+        // img 單獨放，數字/叉叉在 img 外層但同一個 .preview-item 內
+        const img = document.createElement('img');
+        img.src = item.previewUrl;
+
+        const num = document.createElement('div');
+        num.className = 'num';
+        num.textContent = index + 1;
+
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'remove';
+        removeBtn.textContent = '✕';
+
+        el.appendChild(img);
+        el.appendChild(num);
+        el.appendChild(removeBtn);
 
         // 檔名
         const filenameEl = document.createElement('div');
         filenameEl.className = 'filename';
         filenameEl.textContent = item.name;
-        filenameEl.title = item.name; // hover 顯示完整檔名
+        filenameEl.title = item.name;
 
-        // 拖曳事件
+        // 拖曳
         el.addEventListener('dragstart', () => {
           dragSrcIndex = index;
           setTimeout(() => el.classList.add('dragging'), 0);
@@ -281,7 +293,7 @@
           renderPreview();
         });
 
-        el.querySelector('.remove').addEventListener('click', e => {
+        removeBtn.addEventListener('click', e => {
           e.stopPropagation();
           items.splice(index, 1);
           renderPreview();

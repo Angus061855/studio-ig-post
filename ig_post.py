@@ -137,7 +137,7 @@ def main():
     # 取得文案
     caption = get_caption(post)
     if not caption:
-        send_telegram("❌ IG 發文失敗！\n原因：Notion 沒有填文案")
+        send_telegram("❌ IG asent061855 發文失敗！\n原因：Notion 沒有填文案")
         update_status(page_id, "失敗")
         return
     print(f"文案：{caption[:30]}...")
@@ -145,13 +145,13 @@ def main():
     # 取得並上傳圖片
     image_urls = get_image_urls(post)
     if not image_urls:
-        send_telegram("❌ IG 發文失敗！\n原因：Notion 沒有圖片")
+        send_telegram("❌ IG asent061855 發文失敗！\n原因：Notion 沒有圖片")
         update_status(page_id, "失敗")
         return
 
     cdn_urls = upload_images(image_urls)
     if not cdn_urls:
-        send_telegram("❌ IG 發文失敗！\n原因：圖片上傳 Cloudinary 失敗")
+        send_telegram("❌ IG asent061855 發文失敗！\n原因：圖片上傳 Cloudinary 失敗")
         update_status(page_id, "失敗")
         return
 
@@ -165,13 +165,13 @@ def main():
         time.sleep(2)
 
     if len(item_ids) < 2:
-        send_telegram("❌ IG 發文失敗！\n原因：輪播項目建立失敗（至少需要2張圖）")
+        send_telegram("❌ IG asent061855 發文失敗！\n原因：輪播項目建立失敗（至少需要2張圖）")
         update_status(page_id, "失敗")
         return
 
     container_id = create_carousel_container(item_ids, caption)
     if not container_id:
-        send_telegram("❌ IG 發文失敗！\n原因：輪播容器建立失敗")
+        send_telegram("❌ IG asent061855 發文失敗！\n原因：輪播容器建立失敗")
         update_status(page_id, "失敗")
         return
 
@@ -181,11 +181,11 @@ def main():
     post_id = publish_carousel(container_id)
     if post_id:
         update_status(page_id, "已發")
-        send_telegram(f"✅ IG 輪播發文成功！\n文案：{caption[:50]}...")
+        send_telegram(f"✅ IG asent061855 輪播發文成功！\n文案：{caption[:10]}...")
         print("✅ 全部完成！")
     else:
         update_status(page_id, "失敗")
-        send_telegram("❌ IG 發文失敗！\n原因：發布失敗")
+        send_telegram("❌ IG asent061855 發文失敗！\n原因：發布失敗")
 
 if __name__ == "__main__":
     main()

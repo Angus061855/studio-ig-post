@@ -43,9 +43,9 @@ def get_pending_post():
 
 # ── Notion：取得文案 ──────────────────────────────────
 def get_caption(post):
-    rich_text = post["properties"].get("文案", {}).get("rich_text", [])
-    if rich_text:
-        return rich_text[0]["plain_text"]
+    title = post["properties"].get("文案", {}).get("title", [])
+    if title:
+        return title[0]["plain_text"]
     return ""
 
 # ── Notion：取得圖片 URL 清單 ─────────────────────────

@@ -8,7 +8,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f0f2f5;
+      background: #0a0a0a;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -16,36 +16,39 @@
       padding: 20px;
     }
     .container {
-      background: white;
+      background: #1a1a1a;
       border-radius: 16px;
       padding: 32px;
       width: 100%;
       max-width: 560px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+      border: 1px solid #2a2a2a;
     }
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #1a1a1a; }
-    label { display: block; font-size: 14px; font-weight: 600; color: #444; margin-bottom: 6px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #ffffff; }
+    label { display: block; font-size: 14px; font-weight: 600; color: #aaa; margin-bottom: 6px; }
     .field { margin-bottom: 20px; }
     .upload-area {
       width: 100%;
       padding: 20px;
-      border: 2px dashed #d1d5db;
+      border: 2px dashed #333;
       border-radius: 10px;
       cursor: pointer;
       font-size: 14px;
-      color: #888;
+      color: #555;
       text-align: center;
-      transition: border 0.2s;
+      transition: border 0.2s, color 0.2s;
+      background: #111;
     }
     .upload-area:hover { border-color: #6366f1; color: #6366f1; }
     input[type="file"] { display: none; }
     textarea {
       width: 100%;
       padding: 12px;
-      border: 1.5px solid #e5e7eb;
+      border: 1.5px solid #2a2a2a;
       border-radius: 10px;
       font-size: 15px;
-      color: #1a1a1a;
+      color: #eee;
+      background: #111;
       outline: none;
       transition: border 0.2s;
       font-family: inherit;
@@ -53,6 +56,8 @@
       min-height: 120px;
     }
     textarea:focus { border-color: #6366f1; }
+    textarea::placeholder { color: #444; }
+
     .preview-area {
       display: flex;
       flex-wrap: wrap;
@@ -64,28 +69,39 @@
       width: 100px;
       height: 100px;
       border-radius: 10px;
-      overflow: hidden;
-      border: 2px solid #e5e7eb;
+      overflow: visible;
+      border: 2px solid #2a2a2a;
       cursor: grab;
-      transition: transform 0.15s, box-shadow 0.15s;
       user-select: none;
       flex-shrink: 0;
     }
     .preview-item:active { cursor: grabbing; }
     .preview-item.dragging { opacity: 0.3; transform: scale(0.95); }
     .preview-item.drag-over { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
+
     .preview-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       pointer-events: none;
       display: block;
+      border-radius: 8px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
+    /* hover 放大，用 z-index 讓它蓋在其他圖片上 */
+    .preview-item:hover {
+      z-index: 10;
+    }
+    .preview-item:hover img {
+      transform: scale(2.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    }
+
     .preview-item .num {
       position: absolute;
       top: 4px;
       left: 4px;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.75);
       color: white;
       font-size: 11px;
       font-weight: 700;
@@ -95,12 +111,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 11;
     }
     .preview-item .remove {
       position: absolute;
       top: 4px;
       right: 4px;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.75);
       color: white;
       font-size: 12px;
       width: 20px;
@@ -110,9 +127,9 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      z-index: 2;
+      z-index: 11;
     }
-    .hint { font-size: 12px; color: #aaa; margin-top: 6px; }
+    .hint { font-size: 12px; color: #444; margin-top: 6px; }
     button {
       width: 100%;
       padding: 14px;
@@ -136,8 +153,8 @@
       font-weight: 500;
       display: none;
     }
-    .result.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-    .result.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .result.success { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+    .result.error { background: #2d0a0a; color: #f87171; border: 1px solid #7f1d1d; }
   </style>
 </head>
 <body>
@@ -151,7 +168,7 @@
         </div>
         <input type="file" id="images" accept="image/*" multiple>
         <div class="preview-area" id="previewArea"></div>
-        <p class="hint" id="hint" style="display:none">拖曳圖片可調整輪播順序，左上角數字是發布順序</p>
+        <p class="hint" id="hint" style="display:none">拖曳圖片可調整輪播順序，左上角數字是發布順序，滑鼠移上去可放大預覽</p>
       </div>
       <div class="field">
         <label>文案</label>
@@ -163,14 +180,12 @@
   </div>
 
   <script>
-    // 每個項目同時存 file 和 previewUrl，避免非同步亂序
-    let items = []; // [{ file, previewUrl }]
+    let items = [];
     let dragSrcIndex = null;
 
     const previewArea = document.getElementById('previewArea');
     const hint = document.getElementById('hint');
 
-    // 讀取檔案成 base64，回傳 Promise
     function readAsDataURL(file) {
       return new Promise(resolve => {
         const reader = new FileReader();
@@ -179,10 +194,8 @@
       });
     }
 
-    // 選擇圖片
     document.getElementById('images').addEventListener('change', async function () {
-      const newFiles = Array.from(this.files);
-      for (const file of newFiles) {
+      for (const file of Array.from(this.files)) {
         const previewUrl = await readAsDataURL(file);
         items.push({ file, previewUrl });
       }
@@ -190,15 +203,13 @@
       this.value = '';
     });
 
-    // 拖曳檔案進來
     const uploadArea = document.getElementById('uploadArea');
     uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = '#6366f1'; });
-    uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = '#d1d5db'; });
+    uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = '#333'; });
     uploadArea.addEventListener('drop', async e => {
       e.preventDefault();
-      uploadArea.style.borderColor = '#d1d5db';
-      const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-      for (const file of newFiles) {
+      uploadArea.style.borderColor = '#333';
+      for (const file of Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))) {
         const previewUrl = await readAsDataURL(file);
         items.push({ file, previewUrl });
       }
@@ -221,34 +232,24 @@
           <div class="remove">✕</div>
         `;
 
-        // 拖曳排序
         el.addEventListener('dragstart', () => {
           dragSrcIndex = index;
           setTimeout(() => el.classList.add('dragging'), 0);
         });
-        el.addEventListener('dragend', () => {
-          el.classList.remove('dragging');
-        });
-        el.addEventListener('dragover', e => {
-          e.preventDefault();
-          el.classList.add('drag-over');
-        });
-        el.addEventListener('dragleave', () => {
-          el.classList.remove('drag-over');
-        });
+        el.addEventListener('dragend', () => el.classList.remove('dragging'));
+        el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
         el.addEventListener('drop', e => {
           e.preventDefault();
           el.classList.remove('drag-over');
           if (dragSrcIndex === null || dragSrcIndex === index) return;
-          // 移動到目標位置
           const moved = items.splice(dragSrcIndex, 1)[0];
           items.splice(index, 0, moved);
           dragSrcIndex = null;
           renderPreview();
         });
 
-        // 刪除
-        el.querySelector('.remove').addEventListener('click', (e) => {
+        el.querySelector('.remove').addEventListener('click', e => {
           e.stopPropagation();
           items.splice(index, 1);
           renderPreview();
@@ -258,7 +259,6 @@
       });
     }
 
-    // 送出
     document.getElementById('uploadForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       if (items.length === 0) { alert('請選擇至少一張圖片'); return; }
@@ -271,7 +271,6 @@
 
       const formData = new FormData();
       formData.append('caption', document.getElementById('caption').value);
-      // 照目前順序加入
       items.forEach(item => formData.append('images', item.file));
 
       try {

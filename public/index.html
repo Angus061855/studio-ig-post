@@ -23,30 +23,23 @@
       max-width: 560px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 24px;
-      color: #1a1a1a;
-    }
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      color: #444;
-      margin-bottom: 6px;
-    }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #1a1a1a; }
+    label { display: block; font-size: 14px; font-weight: 600; color: #444; margin-bottom: 6px; }
     .field { margin-bottom: 20px; }
-    input[type="file"] {
+    .upload-area {
       width: 100%;
-      padding: 12px;
+      padding: 20px;
       border: 2px dashed #d1d5db;
       border-radius: 10px;
       cursor: pointer;
       font-size: 14px;
-      color: #666;
+      color: #888;
+      text-align: center;
+      transition: border 0.2s;
     }
-    textarea, input[type="datetime-local"] {
+    .upload-area:hover { border-color: #6366f1; color: #6366f1; }
+    input[type="file"] { display: none; }
+    textarea {
       width: 100%;
       padding: 12px;
       border: 1.5px solid #e5e7eb;
@@ -56,11 +49,80 @@
       outline: none;
       transition: border 0.2s;
       font-family: inherit;
+      resize: vertical;
+      min-height: 120px;
     }
-    textarea:focus, input[type="datetime-local"]:focus {
+    textarea:focus { border-color: #6366f1; }
+
+    /* 拖曳排序預覽區 */
+    .preview-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      min-height: 0;
+    }
+    .preview-item {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #e5e7eb;
+      cursor: grab;
+      transition: transform 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .preview-item:active { cursor: grabbing; }
+    .preview-item.dragging {
+      opacity: 0.4;
+      transform: scale(0.95);
+    }
+    .preview-item.drag-over {
       border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
     }
-    textarea { resize: vertical; min-height: 120px; }
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
+    .preview-item .num {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: rgba(0,0,0,0.55);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-item .remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(0,0,0,0.55);
+      color: white;
+      font-size: 13px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .hint {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 6px;
+    }
     button {
       width: 100%;
       padding: 14px;
@@ -72,22 +134,10 @@
       font-weight: 600;
       cursor: pointer;
       transition: opacity 0.2s;
+      margin-top: 4px;
     }
     button:hover { opacity: 0.9; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .preview img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 8px;
-      border: 1.5px solid #e5e7eb;
-    }
     .result {
       margin-top: 20px;
       padding: 14px;
@@ -105,25 +155,20 @@
     <h1>📸 IG 發文上傳</h1>
 
     <form id="uploadForm">
+
       <div class="field">
         <label>選擇圖片（可多選）</label>
-        <input type="file" id="images" name="images" accept="image/*" multiple required>
-        <div class="preview" id="preview"></div>
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('images').click()">
+          點此選擇圖片，或拖曳圖片到這裡
+        </div>
+        <input type="file" id="images" accept="image/*" multiple>
+        <div class="preview-area" id="previewArea"></div>
+        <p class="hint" id="hint" style="display:none">拖曳圖片可調整輪播順序，左上角數字是發布順序</p>
       </div>
 
       <div class="field">
         <label>文案</label>
         <textarea name="caption" id="caption" placeholder="輸入 IG 文案..."></textarea>
-      </div>
-
-      <div class="field">
-        <label>Hashtags</label>
-        <textarea name="hashtags" id="hashtags" placeholder="#旅遊 #生活 #美食" style="min-height:70px;"></textarea>
-      </div>
-
-      <div class="field">
-        <label>預計發布時間</label>
-        <input type="datetime-local" name="scheduleDate" id="scheduleDate">
       </div>
 
       <button type="submit" id="submitBtn">🚀 上傳並儲存到 Notion</button>
@@ -133,45 +178,111 @@
   </div>
 
   <script>
-    // 圖片預覽
-    document.getElementById('images').addEventListener('change', function() {
-      const preview = document.getElementById('preview');
-      preview.innerHTML = '';
-      Array.from(this.files).forEach(file => {
+    let fileList = []; // 維護順序的陣列
+    let dragSrcIndex = null;
+
+    const previewArea = document.getElementById('previewArea');
+    const hint = document.getElementById('hint');
+
+    // 選擇圖片
+    document.getElementById('images').addEventListener('change', function () {
+      Array.from(this.files).forEach(file => fileList.push(file));
+      renderPreview();
+      this.value = ''; // 清空讓同一張可以重選
+    });
+
+    // 拖曳檔案進來
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = '#6366f1'; });
+    uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = '#d1d5db'; });
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#d1d5db';
+      Array.from(e.dataTransfer.files).forEach(file => {
+        if (file.type.startsWith('image/')) fileList.push(file);
+      });
+      renderPreview();
+    });
+
+    function renderPreview() {
+      previewArea.innerHTML = '';
+      if (fileList.length === 0) { hint.style.display = 'none'; return; }
+      hint.style.display = 'block';
+
+      fileList.forEach((file, index) => {
         const reader = new FileReader();
         reader.onload = e => {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          preview.appendChild(img);
+          const item = document.createElement('div');
+          item.className = 'preview-item';
+          item.draggable = true;
+          item.dataset.index = index;
+
+          item.innerHTML = `
+            <img src="${e.target.result}" />
+            <div class="num">${index + 1}</div>
+            <div class="remove" data-index="${index}">✕</div>
+          `;
+
+          // 拖曳排序
+          item.addEventListener('dragstart', () => {
+            dragSrcIndex = index;
+            setTimeout(() => item.classList.add('dragging'), 0);
+          });
+          item.addEventListener('dragend', () => item.classList.remove('dragging'));
+          item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+          item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+          item.addEventListener('drop', e => {
+            e.preventDefault();
+            item.classList.remove('drag-over');
+            if (dragSrcIndex === null || dragSrcIndex === index) return;
+            // 交換順序
+            const moved = fileList.splice(dragSrcIndex, 1)[0];
+            fileList.splice(index, 0, moved);
+            dragSrcIndex = null;
+            renderPreview();
+          });
+
+          // 刪除
+          item.querySelector('.remove').addEventListener('click', () => {
+            fileList.splice(index, 1);
+            renderPreview();
+          });
+
+          previewArea.appendChild(item);
         };
         reader.readAsDataURL(file);
       });
-    });
+    }
 
-    // 表單送出
-    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    // 送出
+    document.getElementById('uploadForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+      if (fileList.length === 0) {
+        alert('請選擇至少一張圖片');
+        return;
+      }
+
       const btn = document.getElementById('submitBtn');
       const result = document.getElementById('result');
-
       btn.disabled = true;
       btn.textContent = '上傳中...';
       result.style.display = 'none';
 
-      const formData = new FormData(this);
+      const formData = new FormData();
+      formData.append('caption', document.getElementById('caption').value);
+      // 照目前順序加入
+      fileList.forEach(file => formData.append('images', file));
 
       try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.success) {
           result.className = 'result success';
-          result.textContent = '✅ 上傳成功！已儲存到 Notion';
+          result.textContent = `✅ 上傳成功！共 ${data.images.length} 張，順序已儲存到 Notion`;
+          fileList = [];
+          renderPreview();
           this.reset();
-          document.getElementById('preview').innerHTML = '';
         } else {
           result.className = 'result error';
           result.textContent = '❌ 失敗：' + data.error;

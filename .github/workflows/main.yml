@@ -1,0 +1,4 @@
+- name: Run ig_post
+  run: |
+    pip install requests cloudinary
+    python ig_post.py

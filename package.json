@@ -1,0 +1,9 @@
+{
+  "name": "studio-ig-post",
+  "version": "1.0.0",
+  "dependencies": {
+    "cloudinary": "^2.0.0",
+    "@notionhq/client": "^2.2.0",
+    "formidable": "^3.5.0"
+  }
+}

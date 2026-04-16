@@ -15,20 +15,17 @@ export default async function handler(req, res) {
     await notion.pages.create({
       parent: { database_id: process.env.NOTION_DATABASE_ID },
       properties: {
-        Name: {
-          title: [{ text: { content: caption.slice(0, 50) || '新貼文' } }]
+        文案: {
+          title: [{ text: { content: caption || '新貼文' } }]
         },
-        Caption: {
-          rich_text: [{ text: { content: caption } }]
-        },
-        Images: {
+        圖片: {
           files: imageUrls.map((url, i) => ({
             name: `image-${i + 1}.jpg`,
             external: { url }
           }))
         },
-        Status: {
-          select: { name: '待發佈' }
+        狀態: {
+          select: { name: '待發' }
         }
       }
     });

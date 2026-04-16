@@ -12,9 +12,10 @@
     .drop-zone { border: 2px dashed #555; border-radius: 12px; padding: 30px; text-align: center; color: #888; cursor: pointer; margin-bottom: 16px; }
     .drop-zone:hover { border-color: #aaa; }
     .preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-    .preview-item { position: relative; }
+    .preview-item { position: relative; display: flex; flex-direction: column; align-items: center; }
     .preview-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; }
     .preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); border: none; color: #fff; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; }
+    .preview-item .filename { font-size: 10px; color: #aaa; margin-top: 4px; word-break: break-all; text-align: center; width: 100%; padding: 0 2px; }
     .hint { font-size: 0.75rem; color: #666; margin-bottom: 16px; }
     label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #ccc; }
     textarea { width: 100%; height: 140px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-size: 0.95rem; resize: vertical; }
@@ -49,6 +50,7 @@
   const UPLOAD_PRESET = 'ig_upload';
 
   let files = [];
+  let dragSrc = null;
 
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
@@ -65,7 +67,10 @@
     dropZone.style.borderColor = '#555';
     addFiles([...e.dataTransfer.files]);
   });
-  fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+  fileInput.addEventListener('change', () => {
+    addFiles([...fileInput.files]);
+    fileInput.value = '';
+  });
 
   function addFiles(newFiles) {
     newFiles.forEach(f => { if (f.type.startsWith('image/')) files.push(f); });
@@ -80,11 +85,24 @@
       div.className = 'preview-item';
       div.draggable = true;
       div.dataset.index = i;
-      div.innerHTML = `
-        <span style="position:absolute;top:4px;left:6px;font-size:11px;background:rgba(0,0,0,0.6);padding:1px 5px;border-radius:4px;">${i+1}</span>
-        <img src="${url}" onclick="window.open('${url}')"/>
+
+      const imgWrapper = document.createElement('div');
+      imgWrapper.style.position = 'relative';
+      imgWrapper.style.width = '100%';
+
+      imgWrapper.innerHTML = `
+        <span style="position:absolute;top:4px;left:6px;font-size:11px;background:rgba(0,0,0,0.6);padding:1px 5px;border-radius:4px;z-index:1;">${i + 1}</span>
+        <img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open('${url}')"/>
         <button class="remove" onclick="removeFile(${i})">×</button>
       `;
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'filename';
+      nameEl.textContent = f.name;
+
+      div.appendChild(imgWrapper);
+      div.appendChild(nameEl);
+
       div.addEventListener('dragstart', dragStart);
       div.addEventListener('dragover', dragOver);
       div.addEventListener('drop', dragDrop);
@@ -92,18 +110,21 @@
     });
   }
 
-  function removeFile(i) { files.splice(i, 1); renderPreviews(); }
+  function removeFile(i) {
+    files.splice(i, 1);
+    renderPreviews();
+  }
 
-  let dragSrc = null;
   function dragStart(e) { dragSrc = +this.dataset.index; }
   function dragOver(e) { e.preventDefault(); }
   function dragDrop(e) {
     e.preventDefault();
     const target = +this.dataset.index;
-    if (dragSrc === target) return;
+    if (dragSrc === null || dragSrc === target) return;
     const tmp = files[dragSrc];
     files[dragSrc] = files[target];
     files[target] = tmp;
+    dragSrc = null;
     renderPreviews();
   }
 
@@ -118,7 +139,7 @@
       body: formData
     });
     const data = await res.json();
-    if (!data.secure_url) throw new Error(`圖片 ${index+1} 上傳失敗`);
+    if (!data.secure_url) throw new Error(`圖片 ${index + 1} 上傳失敗`);
     return { url: data.secure_url, name: file.name };
   }
 
@@ -131,26 +152,21 @@
     message.innerHTML = '';
 
     try {
-      // Step 1：逐張上傳到 Cloudinary
       const urls = [];
       const fileNames = [];
+
       for (let i = 0; i < files.length; i++) {
-        progress.textContent = `上傳圖片中... ${i+1} / ${files.length}`;
+        progress.textContent = `上傳圖片中... ${i + 1} / ${files.length}`;
         const result = await uploadToCloudinary(files[i], i);
         urls.push(result.url);
         fileNames.push(result.name);
       }
 
-      // Step 2：把 URL + 文案 + 檔名傳給 Vercel API 存到 Notion
       progress.textContent = '儲存到 Notion...';
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          imageUrls: urls, 
-          caption,
-          fileNames: fileNames  // ✅ 用 Step 1 收集的順序
-        })
+        body: JSON.stringify({ imageUrls: urls, caption, fileNames })
       });
 
       const result = await res.json();

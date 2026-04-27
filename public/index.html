@@ -9,26 +9,21 @@
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; justify-content: center; padding: 40px 16px; }
     .container { width: 100%; max-width: 600px; }
     h1 { font-size: 1.4rem; margin-bottom: 20px; }
-
-    /* Tab */
     .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
     .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; font-size: 0.95rem; cursor: pointer; background: #1e1e1e; color: #888; transition: all 0.2s; }
     .tab-btn.active { background: #6c63ff; color: #fff; }
-
-    /* Panel */
     .panel { display: none; }
     .panel.active { display: block; }
-
-    .drop-zone { border: 2px dashed #555; border-radius: 12px; padding: 30px; text-align: center; color: #888; cursor: pointer; margin-bottom: 16px; }
+    .drop-zone { position: relative; border: 2px dashed #555; border-radius: 12px; padding: 30px; text-align: center; color: #888; cursor: pointer; margin-bottom: 16px; display: block; }
     .drop-zone:hover { border-color: #aaa; }
-    label.drop-zone { display: block; margin-bottom: 16px; font-size: inherit; color: #888; cursor: pointer; }
+    .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
     .preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
     .preview-item { position: relative; display: flex; flex-direction: column; align-items: center; }
     .preview-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; }
     .preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); border: none; color: #fff; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; }
     .preview-item .filename { font-size: 10px; color: #aaa; margin-top: 4px; word-break: break-all; text-align: center; width: 100%; padding: 0 2px; }
     .hint { font-size: 0.75rem; color: #666; margin-bottom: 16px; }
-    label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #ccc; }
+    .field-label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #ccc; }
     textarea { width: 100%; height: 140px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-size: 0.95rem; resize: vertical; }
     .btn { width: 100%; margin-top: 16px; padding: 14px; background: #6c63ff; color: #fff; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; }
     .btn:disabled { background: #444; cursor: not-allowed; }
@@ -41,7 +36,6 @@
 <body>
 <div class="container">
   <h1>🗂 媒體上傳工具</h1>
-
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('post')">📸 IG 發文</button>
     <button class="tab-btn" onclick="switchTab('story')">⚡ 限時動態</button>
@@ -49,13 +43,13 @@
 
   <!-- IG 發文 Panel -->
   <div class="panel active" id="panel-post">
-    <label class="drop-zone" id="dropZone-post" for="fileInput-post">
-    點此選擇圖片，或拖曳圖片到這裡
-    <input type="file" id="fileInput-post" multiple accept="image/*" style="display:none"/>
-  </label>
+    <label class="drop-zone" id="dropZone-post">
+      點此選擇圖片，或拖曳圖片到這裡
+      <input type="file" id="fileInput-post" multiple accept="image/*"/>
+    </label>
     <div class="preview-grid" id="previewGrid-post"></div>
     <p class="hint">拖曳圖片可調整順序，點圖片可放大預覽</p>
-    <label>文案</label>
+    <span class="field-label">文案</span>
     <textarea id="caption-post" placeholder="輸入 IG 文案..."></textarea>
     <button class="btn" id="uploadBtn-post">🚀 上傳並儲存到 Notion</button>
     <div class="progress" id="progress-post"></div>
@@ -64,8 +58,10 @@
 
   <!-- 限時動態 Panel -->
   <div class="panel" id="panel-story">
-    <label class="drop-zone" id="dropZone-story" for="fileInput-story">點此選擇圖片，或拖曳圖片到這裡</label>
-    <input type="file" id="fileInput-story" multiple accept="image/*" style="display:none"/>
+    <label class="drop-zone" id="dropZone-story">
+      點此選擇圖片，或拖曳圖片到這裡
+      <input type="file" id="fileInput-story" multiple accept="image/*"/>
+    </label>
     <div class="preview-grid" id="previewGrid-story"></div>
     <p class="hint">拖曳圖片可調整順序，點圖片可放大預覽</p>
     <button class="btn" id="uploadBtn-story">⚡ 上傳限時動態到 Notion</button>
@@ -78,7 +74,6 @@
   const CLOUD_NAME = 'dy6uwswgf';
   const UPLOAD_PRESET = 'ig_upload';
 
-  // ── Tab 切換 ──
   function switchTab(tab) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -86,7 +81,6 @@
     document.querySelectorAll('.tab-btn')[tab === 'post' ? 0 : 1].classList.add('active');
   }
 
-  // ── 通用上傳邏輯（post / story 共用） ──
   function initPanel(type) {
     let files = [];
     let dragSrc = null;
@@ -123,7 +117,6 @@
         div.className = 'preview-item';
         div.draggable = true;
         div.dataset.index = i;
-
         const imgWrapper = document.createElement('div');
         imgWrapper.style.position = 'relative';
         imgWrapper.style.width = '100%';
@@ -132,14 +125,12 @@
           <img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open('${url}')"/>
           <button class="remove" onclick="removeFile_${type}(${i})">×</button>
         `;
-
         const nameEl = document.createElement('div');
         nameEl.className = 'filename';
         nameEl.textContent = f.name;
-
         div.appendChild(imgWrapper);
         div.appendChild(nameEl);
-        div.addEventListener('dragstart', e => { dragSrc = +div.dataset.index; });
+        div.addEventListener('dragstart', () => { dragSrc = +div.dataset.index; });
         div.addEventListener('dragover', e => e.preventDefault());
         div.addEventListener('drop', e => {
           e.preventDefault();
@@ -155,29 +146,28 @@
       });
     }
 
-    // 掛到 window 讓 inline onclick 可以呼叫
     window['removeFile_' + type] = function(i) {
       files.splice(i, 1);
       renderPreviews();
     };
 
     async function compressImage(file) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 2000;
-      let w = img.width, h = img.height;
-      if (w > MAX) { h = h * MAX / w; w = MAX; }
-      if (h > MAX) { w = w * MAX / h; h = MAX; }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      canvas.toBlob(blob => resolve(new File([blob], file.name, {type:'image/jpeg'})), 'image/jpeg', 0.85);
-    };
-    img.src = URL.createObjectURL(file);
-  });
-}
-    
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 2000;
+          let w = img.width, h = img.height;
+          if (w > MAX) { h = h * MAX / w; w = MAX; }
+          if (h > MAX) { w = w * MAX / h; h = MAX; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => resolve(new File([blob], file.name, {type:'image/jpeg'})), 'image/jpeg', 0.85);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
     async function uploadToCloudinary(file, index) {
       file = await compressImage(file);
       const formData = new FormData();
@@ -194,17 +184,13 @@
 
     uploadBtn.addEventListener('click', async () => {
       if (files.length === 0) { showMsg('請先選擇圖片', 'error'); return; }
-
-      // 只有 post 需要文案
       let caption = '';
       if (type === 'post') {
         caption = document.getElementById('caption-post').value.trim();
         if (!caption) { showMsg('請輸入文案', 'error'); return; }
       }
-
       uploadBtn.disabled = true;
       message.innerHTML = '';
-
       try {
         const urls = [];
         const fileNames = [];
@@ -214,28 +200,23 @@
           urls.push(result.url);
           fileNames.push(result.name);
         }
-
         progress.textContent = '儲存到 Notion...';
         const endpoint = type === 'post' ? '/api/upload' : '/api/upload-story';
         const body = type === 'post'
           ? { imageUrls: urls, caption, fileNames }
           : { imageUrls: urls, fileNames };
-
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
-
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || '儲存失敗');
-
         progress.textContent = '';
         showMsg(`✅ 成功！已上傳 ${urls.length} 張圖片並儲存到 Notion`, 'success');
         files = [];
         renderPreviews();
         if (type === 'post') document.getElementById('caption-post').value = '';
-
       } catch (err) {
         progress.textContent = '';
         showMsg('❌ ' + err.message, 'error');
@@ -249,7 +230,6 @@
     }
   }
 
-  // 初始化兩個 panel
   initPanel('post');
   initPanel('story');
 </script>

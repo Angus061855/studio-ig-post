@@ -95,7 +95,7 @@
     const progress = document.getElementById('progress-' + type);
     const message = document.getElementById('message-' + type);
 
-    dropZone.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+    dropZone.addEventListener('click', () => fileInput.click()); fileInput.addEventListener('click', (e) => e.stopPropagation());
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#fff'; });
     dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#555');
     dropZone.addEventListener('drop', e => {

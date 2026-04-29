@@ -14,17 +14,26 @@
     .tab-btn.active { background: #6c63ff; color: #fff; }
     .panel { display: none; }
     .panel.active { display: block; }
-    .drop-zone { position: relative; border: 2px dashed #555; border-radius: 12px; padding: 30px; text-align: center; color: #888; cursor: pointer; margin-bottom: 16px; display: block; }
+    .drop-zone {
+      position: relative; border: 2px dashed #555; border-radius: 12px;
+      padding: 36px 20px; text-align: center; color: #888; cursor: pointer;
+      margin-bottom: 16px; display: block; transition: all 0.2s;
+    }
+    .drop-zone.drag-over { border-color: #6c63ff; background: rgba(108,99,255,0.08); color: #bbb; }
     .drop-zone:hover { border-color: #aaa; }
     .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-hint { font-size: 0.85rem; color: #555; margin-top: 8px; }
     .preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
     .preview-item { position: relative; display: flex; flex-direction: column; align-items: center; }
     .preview-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; }
     .preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); border: none; color: #fff; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; }
-    .preview-item .filename { font-size: 12px; color: #aaa; margin-top: 4px; word-break: break-all; text-align: center; width: 100%; padding: 0 2px; }
-    .hint { font-size: 0.85rem; color: #666; margin-bottom: 16px; }
-    .field-label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #ccc; }
-    textarea { width: 100%; height: 140px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-size: 1rem; resize: vertical; }
+    .preview-item .filename { font-size: 11px; color: #666; margin-top: 4px; word-break: break-all; text-align: center; width: 100%; padding: 0 2px; }
+    .order-badge { position: absolute; top: 4px; left: 6px; font-size: 11px; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; z-index: 1; color: #ccc; }
+    .hint { font-size: 0.85rem; color: #555; margin-bottom: 16px; }
+    .caption-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .field-label { font-size: 0.9rem; color: #ccc; }
+    .caption-status { font-size: 0.8rem; color: #6c63ff; }
+    textarea { width: 100%; height: 160px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-size: 0.95rem; resize: vertical; line-height: 1.6; }
     .btn { width: 100%; margin-top: 16px; padding: 14px; background: #6c63ff; color: #fff; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; }
     .btn:disabled { background: #444; cursor: not-allowed; }
     .msg { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 1rem; }
@@ -44,13 +53,17 @@
   <!-- IG 發文 Panel -->
   <div class="panel active" id="panel-post">
     <label class="drop-zone" id="dropZone-post">
-      點此選擇圖片，或拖曳圖片到這裡
-      <input type="file" id="fileInput-post" multiple accept="image/*"/>
+      📂 拖曳資料夾或全選檔案到這裡
+      <div class="drop-hint">支援直接拖曳整個 ig_slides 資料夾<br>會自動讀取圖片順序 + ig_caption.txt 文案</div>
+      <input type="file" id="fileInput-post" multiple accept="image/*,.txt" webkitdirectory/>
     </label>
     <div class="preview-grid" id="previewGrid-post"></div>
     <p class="hint">拖曳圖片可調整順序，點圖片可放大預覽</p>
-    <span class="field-label">文案</span>
-    <textarea id="caption-post" placeholder="輸入 IG 文案..."></textarea>
+    <div class="caption-header">
+      <span class="field-label">文案</span>
+      <span class="caption-status" id="captionStatus-post"></span>
+    </div>
+    <textarea id="caption-post" placeholder="輸入 IG 文案，或拖曳含 ig_caption.txt 的資料夾自動填入..."></textarea>
     <button class="btn" id="uploadBtn-post">🚀 上傳並儲存到 Notion</button>
     <div class="progress" id="progress-post"></div>
     <div id="message-post"></div>
@@ -59,8 +72,9 @@
   <!-- 限時動態 Panel -->
   <div class="panel" id="panel-story">
     <label class="drop-zone" id="dropZone-story">
-      點此選擇圖片，或拖曳圖片到這裡
-      <input type="file" id="fileInput-story" multiple accept="image/*"/>
+      📂 拖曳資料夾或全選檔案到這裡
+      <div class="drop-hint">支援直接拖曳整個 ig_stories 資料夾</div>
+      <input type="file" id="fileInput-story" multiple accept="image/*" webkitdirectory/>
     </label>
     <div class="preview-grid" id="previewGrid-story"></div>
     <p class="hint">拖曳圖片可調整順序，點圖片可放大預覽</p>
@@ -81,6 +95,12 @@
     document.querySelectorAll('.tab-btn')[tab === 'post' ? 0 : 1].classList.add('active');
   }
 
+  // 從檔名提取排序數字，例如 slide-3.png → 3
+  function extractSortKey(filename) {
+    const match = filename.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 9999;
+  }
+
   function initPanel(type) {
     let files = [];
     let dragSrc = null;
@@ -91,21 +111,86 @@
     const uploadBtn = document.getElementById('uploadBtn-' + type);
     const progress = document.getElementById('progress-' + type);
     const message = document.getElementById('message-' + type);
+    const captionStatus = type === 'post' ? document.getElementById('captionStatus-post') : null;
 
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#fff'; });
-    dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#555');
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.style.borderColor = '#555';
-      addFiles([...e.dataTransfer.files]);
+    // 拖曳樣式
+    dropZone.addEventListener('dragenter', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', e => {
+      if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over');
     });
+
+    // 拖曳放入（支援資料夾）
+    dropZone.addEventListener('drop', async e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const items = [...e.dataTransfer.items];
+      const allFiles = [];
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry && entry.isDirectory) {
+          const dirFiles = await readDirectory(entry);
+          allFiles.push(...dirFiles);
+        } else {
+          const f = item.getAsFile();
+          if (f) allFiles.push(f);
+        }
+      }
+      processFiles(allFiles);
+    });
+
+    // 一般選檔
     fileInput.addEventListener('change', () => {
-      addFiles([...fileInput.files]);
+      processFiles([...fileInput.files]);
       fileInput.value = '';
     });
 
-    function addFiles(newFiles) {
-      newFiles.forEach(f => { if (f.type.startsWith('image/')) files.push(f); });
+    // 讀取資料夾內所有檔案
+    function readDirectory(dirEntry) {
+      return new Promise(resolve => {
+        const result = [];
+        const reader = dirEntry.createReader();
+        function readEntries() {
+          reader.readEntries(async entries => {
+            if (!entries.length) { resolve(result); return; }
+            for (const entry of entries) {
+              if (entry.isFile) {
+                const f = await new Promise(res => entry.file(res));
+                result.push(f);
+              }
+            }
+            readEntries();
+          });
+        }
+        readEntries();
+      });
+    }
+
+    function processFiles(allFiles) {
+      const imageFiles = [];
+      let captionText = null;
+
+      allFiles.forEach(f => {
+        const name = f.name.toLowerCase();
+        if (f.type.startsWith('image/') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.webp')) {
+          imageFiles.push(f);
+        } else if ((name === 'ig_caption.txt' || name.endsWith('.txt')) && type === 'post') {
+          // 讀取文案
+          const reader = new FileReader();
+          reader.onload = e => {
+            const text = e.target.result.trim();
+            document.getElementById('caption-post').value = text;
+            if (captionStatus) {
+              captionStatus.textContent = '✓ 已從 txt 自動填入文案';
+            }
+          };
+          reader.readAsText(f);
+        }
+      });
+
+      // 按檔名數字排序
+      imageFiles.sort((a, b) => extractSortKey(a.name) - extractSortKey(b.name));
+      files = imageFiles;
       renderPreviews();
     }
 
@@ -117,19 +202,16 @@
         div.className = 'preview-item';
         div.draggable = true;
         div.dataset.index = i;
-        const imgWrapper = document.createElement('div');
-        imgWrapper.style.position = 'relative';
-        imgWrapper.style.width = '100%';
-        imgWrapper.innerHTML = `
-          <span style="position:absolute;top:4px;left:6px;font-size:11px;background:rgba(0,0,0,0.6);padding:1px 5px;border-radius:4px;z-index:1;">${i + 1}</span>
-          <img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open('${url}')"/>
-          <button class="remove" onclick="removeFile_${type}(${i})">×</button>
+
+        div.innerHTML = `
+          <div style="position:relative;width:100%">
+            <span class="order-badge">${i + 1}</span>
+            <img src="${url}" onclick="window.open('${url}')"/>
+            <button class="remove" onclick="removeFile_${type}(${i})">×</button>
+          </div>
+          <div class="filename">${f.name}</div>
         `;
-        const nameEl = document.createElement('div');
-        nameEl.className = 'filename';
-        nameEl.textContent = f.name;
-        div.appendChild(imgWrapper);
-        div.appendChild(nameEl);
+
         div.addEventListener('dragstart', () => { dragSrc = +div.dataset.index; });
         div.addEventListener('dragover', e => e.preventDefault());
         div.addEventListener('drop', e => {
@@ -142,6 +224,7 @@
           dragSrc = null;
           renderPreviews();
         });
+
         previewGrid.appendChild(div);
       });
     }
@@ -162,7 +245,7 @@
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          canvas.toBlob(blob => resolve(new File([blob], file.name, {type:'image/jpeg'})), 'image/jpeg', 0.85);
+          canvas.toBlob(blob => resolve(new File([blob], file.name, {type: 'image/jpeg'})), 'image/jpeg', 0.85);
         };
         img.src = URL.createObjectURL(file);
       });
@@ -216,7 +299,10 @@
         showMsg(`✅ 成功！已上傳 ${urls.length} 張圖片並儲存到 Notion`, 'success');
         files = [];
         renderPreviews();
-        if (type === 'post') document.getElementById('caption-post').value = '';
+        if (type === 'post') {
+          document.getElementById('caption-post').value = '';
+          if (captionStatus) captionStatus.textContent = '';
+        }
       } catch (err) {
         progress.textContent = '';
         showMsg('❌ ' + err.message, 'error');
@@ -225,8 +311,8 @@
       }
     });
 
-    function showMsg(text, type) {
-      message.innerHTML = `<div class="msg ${type}">${text}</div>`;
+    function showMsg(text, cls) {
+      message.innerHTML = `<div class="msg ${cls}">${text}</div>`;
     }
   }
 
